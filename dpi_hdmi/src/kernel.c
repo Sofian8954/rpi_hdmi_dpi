@@ -22,6 +22,8 @@ void kernel_main(void) {
 	fb_three	= (uint16_t*)FB_THREE;
 	fb_four		= (uint32_t*)FB_FOUR;
 	fb_five		= (uint32_t*)FB_FIVE;
+	fb_six		= (uint32_t*)FB_SIX;
+
     /* Each framebuffer will be a quarter of the screen in dimensions. */
     const uint16_t screen_width = HDMI_WIDTH, screen_height = HDMI_HEIGHT;
     const uint16_t fb_width = screen_width / 2, fb_height = screen_height / 2;
