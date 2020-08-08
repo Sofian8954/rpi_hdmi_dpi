@@ -1,9 +1,6 @@
 
 ARMGNU ?= aarch64-elf
-# Speed +1
-COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude -march=armv8-a+crc -mcpu=cortex-a53+fp+simd
-# Speed = 1
-#COPS = -Wall -nostdlib -nostartfiles -ffreestanding -Iinclude 
+COPS = -Wall -O3 -nostdlib -nostartfiles -ffreestanding -Iinclude -march=armv8-a+crc -mcpu=cortex-a53+fp+simd -mstrict-align -fno-tree-loop-vectorize -fno-tree-slp-vectorize
 ASMOPS = -Iinclude
 
 BUILD_DIR = build
@@ -24,7 +21,6 @@ $(BUILD_DIR)/%_c.o: $(SRC_DIR)/%.c
 $(BUILD_DIR)/%_s.o: $(SRC_DIR)/%.S
 	$(ARMGNU)-gcc $(ASMOPS) -MMD -c $< -o $@
 
-# C_FILES = $(wildcard $(SRC_DIR)/*.c)
 C_FILES = $(wildcard $(SRC_DIR)/*.c $(SRC_DIR)/*/*.c)
 
 ASM_FILES = $(wildcard $(SRC_DIR)/*.S)
@@ -37,7 +33,7 @@ DEP_FILES = $(OBJ_FILES:%.o=%.d)
 kernel8.img: $(SRC_DIR)/linker.ld $(OBJ_FILES)
 	$(ARMGNU)-ld -T $(SRC_DIR)/linker.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
 	$(ARMGNU)-objcopy $(BUILD_DIR)/kernel8.elf -O binary $(DISK_DIR)/kernel8.img
+#	$(ARMGNU)-nm -n $(BUILD_DIR)/kernel8.elf > $(BUILD_DIR)/kernel8.map
 
-# run: clean kernel8.img listasm
 run: clean kernel8.img
 	qemu-system-aarch64 -M raspi3 -kernel $(DISK_DIR)/kernel8.img -serial stdio
