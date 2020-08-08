@@ -10,6 +10,7 @@
 #include "peripherals/hvs.h"
 #include "kernel.h"
 #include "utils.h"
+#include "draw.h"
 
 //------------------------------------------------------------------------------//
 void setup_dpi_pixel_valve(void) {
@@ -80,7 +81,7 @@ void setup_dpi_pixel_valve(void) {
 	Gpio_Resistor(27, NO_RESISTOR);
 
 //------------------------------------------------------------------------------//
-// Setuip Clock Manager for DPI
+// Setup Clock Manager for DPI
 	// GP0CLK 36.8640MHz: PLLD 500 MHz / 36.8640MHz = 13.5633 : I = 13 : F = (0.5633 * 4096) = 2307
 	// 9Mhz: OSC 19.2Mhz / 9.6Mhz = 2 : I = 2 : F =(0 * 4096) = 0
 	CM_DPICTL = (CM_PASSWORD + 0x0021);		// Disable Clock Generator, oscillator
@@ -127,108 +128,23 @@ void setup_HVS_DPI(void) {
 	*ptrMem++ = 0x00000664;
 	*ptrMem++ = 0x00000000;
 	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x801E0110;
+
+	*ptrMem++ = 0x801E0110;				// (480 << 12) + 272
 	*ptrMem++ = 0x81000000;
-	*ptrMem++ = 0xA19920C8;
-	*ptrMem++ = 0x50FF3C90;
-	*ptrMem++ = 0x80500400;
-	*ptrMem++ = 0x81000000;
-	*ptrMem++ = 0xA0A2B3EE;
-	*ptrMem++ = 0x3C8F0800;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x10000000;
-	*ptrMem++ = 0x07FF0000;
-	*ptrMem++ = 0x000000FF;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x64647276;
 
 }
 //------------------------------------------------------------------------------//
-// setup value from Raspbian Buster
-void setup_HVS(void) {
-
-	uint32_t *ptrMem;
-
-	ptrMem = (uint32_t*)(PBASE + 0x00400000);
-	*ptrMem++ = 0x9A0C0FFF;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x71BF0000;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x0000F81E;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x00000334;			// 0x00400020
-	*ptrMem++ = 0x00000664;			// 0x00400024
-	*ptrMem++ = 0x00000000;			// 0x00400028
-	*ptrMem++ = 0x30000000;
-	*ptrMem++ = 0x00000334;
-	*ptrMem++ = 0x00000664;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x801E0110;
-	*ptrMem++ = 0x81000000;
-	*ptrMem++ = 0xA19AF044;
-	*ptrMem++ = 0x50FF3C90;
-	*ptrMem++ = 0x80500400;
-	*ptrMem++ = 0x81000000;
-	*ptrMem++ = 0xA02082CC;
-	*ptrMem++ = 0x3C8F0800;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x10000000;
-	*ptrMem++ = 0x07FF0000;
-	*ptrMem++ = 0x000000FF;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x64647276;
-
-	*ptrMem++ = 0x00000000;			// 0x3F400080
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x00000000;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x64647276;
-	*ptrMem++ = 0x00001011;
-	*ptrMem++ = 0x000011CD;
-	*ptrMem++ = 0x00FFFFFF;
-	*ptrMem++ = 0x000014E8;
-
-	ptrMem = (uint32_t*) 0x3F4000E0;
-	*ptrMem++ = 0x00000062;
-	*ptrMem++ = 0x00000062;
-	*ptrMem++ = 0x00000062;
-	*ptrMem++ = 0x00000062;
-	*ptrMem++ = 0x00000062;
-	*ptrMem++ = 0x00000062;
-	*ptrMem++ = 0x00000062;
-	*ptrMem++ = 0x00000062;
-
-}
-//------------------------------------------------------------------------------//
-static volatile uint32_t* dlist_memory = (uint32_t*) 0x3F402400;
+static volatile uint32_t* dlist_memory = (uint32_t*) 0x3F402000;
 
 /* We'll use a simple "double buffering" scheme to avoid writing out a new display list while
    one is still in-flight. */
 static const uint16_t dlist_buffer_count = 2;
-static const uint16_t dlist_offsets[] = { 0, 128 };
+static const uint16_t dlist_offsets[] = { 0x200, 0x300 };
 static uint16_t next_dlist_buffer = 0;
 
 #define WRITE_WORD(word) (dlist_memory[(*offset)++] = word)
 
-static void write_plane(uint16_t* offset, hvs_plane plane)
+static void write_plane_DPI(uint16_t* offset, hvs_plane plane)
 {
     /* Write out the words for this plane. Each word conveys some information to the HVS on how it
        should interpret this plane. */
@@ -270,28 +186,22 @@ static void write_plane(uint16_t* offset, hvs_plane plane)
     uint32_t pitch_word = plane.pitch;
     WRITE_WORD(pitch_word);
 }
-
-void write_plane_DPI(void) {
-
-hvs_plane plane;
-	plane.format = HVS_PIXEL_FORMAT_RGBA8888,
-	plane.pixel_order = HVS_PIXEL_ORDER_ARGB,
-	plane.start_x = 0;
-	plane.start_y = 0;
-	plane.height = LCD_HEIGHT,
-	plane.width = LCD_WIDTH,
-	plane.pitch = LCD_WIDTH * sizeof(uint32_t),
-    plane.framebuffer = fb_four;
+void write_display_list_DPI(hvs_plane planes[], uint8_t count) {
 
     uint16_t offset = dlist_offsets[next_dlist_buffer];
-    const uint16_t start = offset;
+    uint16_t start = offset;
 
-	write_plane(&offset, plane);
-// End Word
+    /* Write out each plane. */
+    for (uint8_t p = 0; p < count; p++) {
+        write_plane_DPI(&offset, planes[p]);
+    }
+
+    /* End Word */
     dlist_memory[offset] = SCALER_CTL0_END;
-// Tell the HVS where the display list is by writing to the SCALER_DISPLIST1 register.
+
+    /* Tell the HVS where the display list is by writing register. */
     put32(SCALER_DISPLIST0, start);
 
     next_dlist_buffer = (next_dlist_buffer + 1) % dlist_buffer_count;
- }
+}
 

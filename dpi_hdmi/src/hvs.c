@@ -10,7 +10,7 @@ static volatile uint32_t* dlist_memory = (uint32_t*) 0x3F402000;
 /* We'll use a simple "double buffering" scheme to avoid writing out a new display list while
    one is still in-flight. */
 static const uint16_t dlist_buffer_count = 2;
-static const uint16_t dlist_offsets[] = { 0, 128 };
+static const uint16_t dlist_offsets[] = { 0x000, 0x100 };
 static uint16_t next_dlist_buffer = 0;
 
 #define WRITE_WORD(word) (dlist_memory[(*offset)++] = word)
@@ -71,7 +71,7 @@ void write_display_list(hvs_plane planes[], uint8_t count)
     /* End Word */
     dlist_memory[offset] = SCALER_CTL0_END;
 
-    /* Tell the HVS where the display list is by writing to the SCALER_DISPLIST1 register. */
+    /* Tell the HVS where the display list is by writing register. */
     put32(SCALER_DISPLIST1, start);
 
     next_dlist_buffer = (next_dlist_buffer + 1) % dlist_buffer_count;

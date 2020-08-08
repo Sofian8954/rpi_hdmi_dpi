@@ -9,33 +9,46 @@
 #include "kernel.h"
 #include "dpi.h"
 
-void kernel_main(void)
-{
+void kernel_main(void) {
+
+	uint8_t i, x, y;
+
 	uart_init();
     init_printf(0, putc);
     debug_print_registers();
 
-	setup_dpi_pixel_valve();
-	setup_HVS_DPI();				// setup value from Raspbian Buster
-	setup_HVS();					// setup value from Raspbian Buster
-	write_plane_DPI();
-
-
-    /* "Allocate" 4 framebuffers in memory. Each is 1MiB in size, which is plenty for our purposes. */
-    // uint16_t* const fb_one     = (uint16_t*)(0x10000000);   // the first 3 will use 16-bit pixels.
-    // uint16_t* const fb_two     = (uint16_t*)(0x10100000);
-    // uint16_t* const fb_three   = (uint16_t*)(0x10200000);
-    // uint32_t* const fb_four    = (uint32_t*)(0x10300000);   // this one will use a 32-bit pixel format.
-		fb_one		= (uint16_t*)FB_ONE;
-		fb_two		= (uint16_t*)FB_TWO;
-		fb_three	= (uint16_t*)FB_THREE;
-		fb_four		= (uint32_t*)FB_FOUR;
-
+	fb_one		= (uint16_t*)FB_ONE;
+	fb_two		= (uint16_t*)FB_TWO;
+	fb_three	= (uint16_t*)FB_THREE;
+	fb_four		= (uint32_t*)FB_FOUR;
+	fb_five		= (uint32_t*)FB_FIVE;
     /* Each framebuffer will be a quarter of the screen in dimensions. */
     const uint16_t screen_width = HDMI_WIDTH, screen_height = HDMI_HEIGHT;
     const uint16_t fb_width = screen_width / 2, fb_height = screen_height / 2;
     const uint16_t fb_center_x = fb_width / 2;
     const uint16_t fb_center_y = fb_height / 2;
+
+	setup_dpi_pixel_valve();
+	setup_HVS_DPI();				// setup value from Raspbian Buster
+
+	i = 0;
+	for (x = 0; x < 2; x++) {
+		planes_DPI[i].format = HVS_PIXEL_FORMAT_RGBA8888,
+		planes_DPI[i].pixel_order = HVS_PIXEL_ORDER_ARGB,
+		planes_DPI[i].start_x = (LCD_WIDTH / 2) * x;
+		planes_DPI[i].start_y = 0;
+		planes_DPI[i].height = LCD_HEIGHT,
+		planes_DPI[i].width = (LCD_WIDTH / 2),
+		planes_DPI[i].pitch = LCD_WIDTH * 2,
+		i++;
+	}
+
+    planes_DPI[0].framebuffer = fb_five;
+    planes_DPI[1].framebuffer = fb_six;
+
+    clear_plane_32(planes_DPI[0], RED_32);
+    clear_plane_32(planes_DPI[1], BLUE_32);
+	write_display_list_DPI(planes_DPI, 2);
 
     /* Set up initial display list - a single plane centered on the screen. */
     hvs_plane plane = {
@@ -48,6 +61,7 @@ void kernel_main(void)
         .pitch = fb_width * sizeof(uint16_t),
         .framebuffer = fb_one
     };
+    clear_plane_16(plane, BLUE_16);
     printf("Writing initial display list.r\n");
     write_display_list(&plane, 1);
 
@@ -72,7 +86,7 @@ void kernel_main(void)
 
     /* Move the plane across the screen. */
     printf("Translating plane across screen.r\n");
-    for (int i = 0; i < 10; i++) {
+    for (i = 0; i < 10; i++) {
         plane.start_x = i * ((screen_width - fb_width) / 10);
         plane.start_y = i * ((screen_height - fb_height) / 10);
         write_display_list(&plane, 1);
@@ -81,9 +95,9 @@ void kernel_main(void)
 
     /* Set up 4 planes. */
     hvs_plane planes[4];
-    int i = 0;
-    for (int y = 0; y < 2; y++) {
-        for (int x = 0; x < 2; x++) {
+    i = 0;
+    for (y = 0; y < 2; y++) {
+        for (x = 0; x < 2; x++) {
             planes[i].format = HVS_PIXEL_FORMAT_RGB565,
             planes[i].pixel_order = HVS_PIXEL_ORDER_ARGB,
             planes[i].start_x = fb_width * x;
@@ -101,7 +115,7 @@ void kernel_main(void)
 
     /* We'll make the fourth framebuffer a 32-bit pixel format, just for demonstrations. */
     planes[3].format = HVS_PIXEL_FORMAT_RGBA8888;
-    planes[3].pitch = fb_width * sizeof(uint32_t);
+    planes[3].pitch = fb_width * 4;
 
     printf("Updating display list with 4 framebuffers.r\n");
     write_display_list(planes, 4);
@@ -141,15 +155,19 @@ void kernel_main(void)
     printf("Now rotating framebuffers in an infinite loop.\r\n");
     while (1) {
         /* Rotate the planes every so often... */
-        for (int y = 0; y < 2; y++) {
-            for (int x = 0; x < 2; x++) {
+        for (y = 0; y < 2; y++) {
+            for (x = 0; x < 2; x++) {
                 int plane_index = (y * 2 + x + first_plane) % 4;
                 planes[plane_index].start_x = fb_width * x;
                 planes[plane_index].start_y = fb_height * y;
             }
         }
-
         write_display_list(planes, 4);
+
+		planes_DPI[0].start_x = planes_DPI[0].start_x?0:(LCD_WIDTH / 2);
+		planes_DPI[1].start_x = planes_DPI[1].start_x?0:(LCD_WIDTH / 2);
+		write_display_list_DPI(planes_DPI, 2);
+
         delay(9000000 * 1);
 
         first_plane = (first_plane + 1) % 4;
