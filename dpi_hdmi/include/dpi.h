@@ -7,6 +7,7 @@
 // Includes ------------------------------------------------------------------- //
 #include "peripherals/base.h"
 #include "peripherals/gpio.h"
+#include "hvs.h"
 
 //------------------------------------------------------------------------------//
 #define CM_PASSWORD					0x5A000000
@@ -48,9 +49,11 @@
 #define LCD_VSYNC					14
 
 //------------------------------------------------------------------------------//
+    hvs_plane planes_DPI[2];
+
+//------------------------------------------------------------------------------//
 void setup_dpi_pixel_valve(void);
 void setup_HVS_DPI(void);
-void setup_HVS(void);
-void write_plane_DPI(void);
+void write_display_list_DPI(hvs_plane planes[], uint8_t count);
 
 #endif  /*_DPI_H */
